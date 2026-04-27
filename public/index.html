@@ -3,86 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlignMind Tasks</title>
+  <title>AlignMind AI Training</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f172a; 
-      color: white; 
-      margin: 0; 
-      padding: 16px;
-    }
-   .card { 
-      background: #1e293b; 
-      border-radius: 12px; 
-      padding: 20px; 
-      margin-bottom: 16px; 
-      border: 1px solid #334155;
-    }
-   .header { font-size: 14px; color: #94a3b8; margin-bottom: 8px; }
-   .balance { font-size: 36px; font-weight: bold; color: #2563EB; margin: 8px 0; }
-   .stats { color: #cbd5e1; font-size: 14px; }
-   .btn { 
-      background: #2563EB; 
-      color: white; 
-      border: none; 
-      padding: 16px; 
-      width: 100%; 
-      border-radius: 8px; 
-      font-size: 16px; 
-      font-weight: 600;
-      cursor: pointer;
-    }
-   .btn:disabled { background: #475569; cursor: not-allowed; }
-   .btn-secondary { background: #475569; margin-top: 12px; }
+    body { background:#0f172a; color:white; font-family:system-ui; margin:0; padding:20px; }
+    .card { background:#1e293b; border-radius:12px; padding:20px; margin-bottom:15px; }
+    .btn { width:100%; padding:15px; border:none; border-radius:8px; font-size:16px; font-weight:600; margin:5px 0; }
+    .btn-primary { background:#2563eb; color:white; }
+    .btn-secondary { background:#475569; color:white; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000000cc; z-index:100; }
+    .modal-content { background:#1e293b; margin:15% auto; padding:20px; width:90%; max-width:400px; border-radius:12px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="header" id="username">Loading...</div>
-    <div>Current Balance</div>
-    <div class="balance">$<span id="balance">0.00</span></div>
-    <div class="stats">Tasks Completed: <span id="tasks">0</span></div>
+    <p style="color:#94a3b8; margin:0;">Hi, <span id="username">User</span></p>
+    <p style="color:#94a3b8; margin:5px 0;">Current Balance</p>
+    <h1 style="margin:5px 0; font-size:36px;">$<span id="balance">0.00</span></h1>
+    <p style="color:#94a3b8; margin:0;" id="tasks">Tasks Completed: 0</p>
   </div>
 
-  <div class="card">
-    <button class="btn" id="taskBtn" onclick="startTask()">Start New Task</button>
-    <button class="btn btn-secondary" onclick="withdraw()">Withdraw Earnings</button>
+  <button class="btn btn-primary" onclick="startNewTask()">Start New Task</button>
+  <button class="btn btn-secondary" onclick="withdraw()">Withdraw Earnings</button>
+
+  <!-- Task Modal -->
+  <div id="taskModal" class="modal">
+    <div class="modal-content">
+      <h3 id="taskTitle" style="margin-top:0;">Loading Task...</h3>
+      <p id="taskQuestion" style="color:#94a3b8; font-size:14px;"></p>
+      <p><b>Is this response correct?</b></p>
+      <button class="btn btn-primary" onclick="submitTask(true)">Yes - Correct</button>
+      <button class="btn btn-secondary" onclick="submitTask(false)">No - Wrong</button>
+      <button class="btn" style="background:none; border:1px solid #475569; color:#94a3b8;" onclick="closeTask()">Cancel</button>
+    </div>
   </div>
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    tg.ready();
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  let currentTask = null;
+  const user = tg.initDataUnsafe.user;
+  
+  document.getElementById('username').innerText = user.first_name || 'User';
+  
+  // Load user data
+  fetch(`/api/user/${user.id}`).then(r => r.json()).then(data => {
+    document.getElementById('balance').innerText = data.balance.toFixed(2);
+    document.getElementById('tasks').innerText = `Tasks Completed: ${data.tasksCompleted}`;
+  });
 
-    let userData = {};
+  async function startNewTask() {
+    document.getElementById('taskTitle').innerText = 'Loading...';
+    document.getElementById('taskQuestion').innerText = '';
+    document.getElementById('taskModal').style.display = 'block';
+    
+    const res = await fetch(`/api/get-task?userId=${user.id}`);
+    currentTask = await res.json();
+    
+    document.getElementById('taskTitle').innerText = `Rate This AI Response - $${currentTask.payout.toFixed(2)}`;
+    document.getElementById('taskQuestion').innerText = currentTask.question;
+  }
 
-    // Load user data on startup
-    fetch('/api/user', {
+  function closeTask() {
+    document.getElementById('taskModal').style.display = 'none';
+  }
+
+  async function submitTask(userAnswer) {
+    const response = await fetch('/api/complete-task', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: tg.initData })
-    })
-   .then(r => r.json())
-   .then(user => {
-      userData = user;
-      document.getElementById('username').innerText = `Hi, ${user.first_name || user.username || 'User'}`;
-      document.getElementById('balance').innerText = user.balance;
-      document.getElementById('tasks').innerText = user.tasks_completed;
-    })
-   .catch(err => {
-      document.getElementById('username').innerText = 'Error loading data';
-      console.error(err);
+      body: JSON.stringify({ 
+        userId: user.id,
+        taskId: currentTask.id,
+        payout: currentTask.payout
+      })
     });
-
-    function startTask() {
-      tg.showAlert('Task system coming in Step 5. Backend ready, UI next.');
+    const data = await response.json();
+    if(data.success) {
+      document.getElementById('balance').innerText = data.newBalance.toFixed(2);
+      document.getElementById('tasks').innerText = `Tasks Completed: ${data.tasksCompleted}`;
+      tg.showAlert(`Task complete! +$${currentTask.payout.toFixed(2)} added`);
     }
+    closeTask();
+  }
 
-    function withdraw() {
-      tg.showAlert('Withdrawals coming in Step 6. Minimum $10.00');
-    }
-  </script>
+  function withdraw() {
+    tg.showAlert('Withdrawals coming soon. Contact @Bill to cash out for now.');
+  }
+</script>
 </body>
   </html>
