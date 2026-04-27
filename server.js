@@ -13,7 +13,7 @@ const taskPool = [
 ];
 
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('public')); // THIS LINE IS CRITICAL
 
 app.get('/api/get-task', (req, res) => {
   const userId = req.query.userId;
