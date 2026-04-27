@@ -3,93 +3,140 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AlignMind AI Training</title>
+  <title>AlignMind</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { background:#0f172a; color:white; font-family:system-ui; margin:0; padding:20px; }
-    .card { background:#1e293b; border-radius:12px; padding:20px; margin-bottom:15px; }
-    .btn { width:100%; padding:15px; border:none; border-radius:8px; font-size:16px; font-weight:600; margin:5px 0; }
-    .btn-primary { background:#2563eb; color:white; }
-    .btn-secondary { background:#475569; color:white; }
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000000cc; z-index:100; }
-    .modal-content { background:#1e293b; margin:15% auto; padding:20px; width:90%; max-width:400px; border-radius:12px; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'Inter', system-ui; 
+      color:white; 
+      min-height:100vh;
+      padding:16px;
+    }
+   .glass { 
+      background: rgba(255,255,255,0.1); 
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 24px; 
+      padding:24px; 
+      margin-bottom:16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+   .balance-card { text-align:center; }
+   .balance-label { color:rgba(255,255,255,0.7); font-size:14px; margin-bottom:8px; }
+   .balance-amount { font-size:48px; font-weight:700; margin:8px 0; }
+   .stats { display:flex; justify-content:space-around; margin-top:20px; }
+   .stat-item { text-align:center; }
+   .stat-value { font-size:20px; font-weight:600; }
+   .stat-label { font-size:12px; color:rgba(255,255,255,0.7); }
+   .btn { 
+      width:100%; 
+      padding:18px; 
+      border:none; 
+      border-radius:16px; 
+      font-size:16px; 
+      font-weight:600; 
+      margin:8px 0;
+      transition: all 0.2s;
+    }
+   .btn:active { transform: scale(0.98); }
+   .btn-primary { background:white; color:#667eea; }
+   .btn-secondary { background:rgba(255,255,255,0.2); color:white; }
+   .header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+   .avatar { width:48px; height:48px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; }
+   .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; padding:16px; }
+   .modal-content { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: 1px solid rgba(255,255,255,0.2);
+      margin:20% auto; padding:24px; width:100%; max-width:400px; border-radius:24px; 
+    }
+   .task-question { background:rgba(255,255,255,0.1); padding:16px; border-radius:16px; margin:16px 0; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <p style="color:#94a3b8; margin:0;">Hi, <span id="username">User</span></p>
-    <p style="color:#94a3b8; margin:5px 0;">Current Balance</p>
-    <h1 style="margin:5px 0; font-size:36px;">$<span id="balance">0.00</span></h1>
-    <p style="color:#94a3b8; margin:0;" id="tasks">Tasks Completed: 0</p>
+  <div class="header">
+    <div class="avatar" id="avatar">B</div>
+    <div>
+      <div style="font-weight:600; font-size:18px;">Hi, <span id="username">User</span> 👋</div>
+      <div style="font-size:14px; color:rgba(255,255,255,0.7);">Level 1 Trainer</div>
+    </div>
   </div>
 
-  <button class="btn btn-primary" onclick="startNewTask()">Start New Task</button>
-  <button class="btn btn-secondary" onclick="withdraw()">Withdraw Earnings</button>
+  <div class="glass balance-card">
+    <div class="balance-label">Total Earnings</div>
+    <div class="balance-amount">$<span id="balance">0.00</span></div>
+    <div class="stats">
+      <div class="stat-item">
+        <div class="stat-value" id="tasks">0</div>
+        <div class="stat-label">Tasks</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Streak</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">1</div>
+        <div class="stat-label">Level</div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Task Modal -->
+  <button class="btn btn-primary" onclick="startNewTask()">🚀 Start New Task</button>
+  <button class="btn btn-secondary" onclick="withdraw()">💸 Withdraw Earnings</button>
+
   <div id="taskModal" class="modal">
     <div class="modal-content">
-      <h3 id="taskTitle" style="margin-top:0;">Loading Task...</h3>
-      <p id="taskQuestion" style="color:#94a3b8; font-size:14px;"></p>
-      <p><b>Is this response correct?</b></p>
-      <button class="btn btn-primary" onclick="submitTask(true)">Yes - Correct</button>
-      <button class="btn btn-secondary" onclick="submitTask(false)">No - Wrong</button>
-      <button class="btn" style="background:none; border:1px solid #475569; color:#94a3b8;" onclick="closeTask()">Cancel</button>
+      <h3 style="margin-bottom:8px;">New Task - $<span id="taskPayout">0.50</span></h3>
+      <div class="task-question" id="taskQuestion">Loading...</div>
+      <p style="margin-bottom:16px; font-weight:500;">Is this response correct?</p>
+      <button class="btn btn-primary" onclick="submitTask()">✅ Yes, Correct</button>
+      <button class="btn btn-secondary" onclick="submitTask()">❌ No, Wrong</button>
+      <button class="btn" style="background:none; color:rgba(255,255,255,0.7);" onclick="closeTask()">Cancel</button>
     </div>
   </div>
 
 <script>
   const tg = window.Telegram.WebApp;
   tg.expand();
+  tg.setHeaderColor('#667eea');
   let currentTask = null;
   const user = tg.initDataUnsafe.user;
   
   document.getElementById('username').innerText = user.first_name || 'User';
+  document.getElementById('avatar').innerText = (user.first_name || 'U')[0].toUpperCase();
   
-  // Load user data
   fetch(`/api/user/${user.id}`).then(r => r.json()).then(data => {
     document.getElementById('balance').innerText = data.balance.toFixed(2);
-    document.getElementById('tasks').innerText = `Tasks Completed: ${data.tasksCompleted}`;
+    document.getElementById('tasks').innerText = data.tasksCompleted;
   });
 
   async function startNewTask() {
-    document.getElementById('taskTitle').innerText = 'Loading...';
-    document.getElementById('taskQuestion').innerText = '';
     document.getElementById('taskModal').style.display = 'block';
-    
     const res = await fetch(`/api/get-task?userId=${user.id}`);
     currentTask = await res.json();
-    
-    document.getElementById('taskTitle').innerText = `Rate This AI Response - $${currentTask.payout.toFixed(2)}`;
+    document.getElementById('taskPayout').innerText = currentTask.payout.toFixed(2);
     document.getElementById('taskQuestion').innerText = currentTask.question;
   }
 
-  function closeTask() {
-    document.getElementById('taskModal').style.display = 'none';
-  }
+  function closeTask() { document.getElementById('taskModal').style.display = 'none'; }
 
-  async function submitTask(userAnswer) {
-    const response = await fetch('/api/complete-task', {
+  async function submitTask() {
+    const res = await fetch('/api/complete-task', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        userId: user.id,
-        taskId: currentTask.id,
-        payout: currentTask.payout
-      })
+      body: JSON.stringify({ userId: user.id, payout: currentTask.payout })
     });
-    const data = await response.json();
-    if(data.success) {
-      document.getElementById('balance').innerText = data.newBalance.toFixed(2);
-      document.getElementById('tasks').innerText = `Tasks Completed: ${data.tasksCompleted}`;
-      tg.showAlert(`Task complete! +$${currentTask.payout.toFixed(2)} added`);
-    }
+    const data = await res.json();
+    document.getElementById('balance').innerText = data.newBalance.toFixed(2);
+    document.getElementById('tasks').innerText = data.tasksCompleted;
+    tg.HapticFeedback.notificationOccurred('success');
+    tg.showAlert(`+ $${currentTask.payout.toFixed(2)} earned! 🎉`);
     closeTask();
   }
 
-  function withdraw() {
-    tg.showAlert('Withdrawals coming soon. Contact @Bill to cash out for now.');
-  }
+  function withdraw() { tg.showAlert('Withdrawals opening soon! Contact @Bill for manual payout.'); }
 </script>
 </body>
-  </html>
+          </html>
